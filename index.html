@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0a0920">
+  <title>rilzapiweb — REST API musik untuk bot dan aplikasi</title>
+  <meta name="description" content="REST API musik: cari lagu lewat YouTube dan dapatkan nama artis asli, album, cover, serta preview 30 detik dalam satu respons JSON.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23ffd43b'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%230a0920'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-note" viewBox="0 0 24 24"><path fill="currentColor" d="M18 3v12.2A3.5 3.5 0 1 1 16 12V6.3L9 8v9.2A3.5 3.5 0 1 1 7 14V5.5L18 3z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M6 4h4v16H6zM14 4h4v16h-4z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.5l5 5 10-11"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zm5.5-2l5 5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" d="M9 6h12M9 12h12M9 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM4 21c.8-4 4-6 8-6s7.2 2 8 6"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M14.5 9.5a4.5 4.5 0 1 0-1.4 3.2L21 20.5V17h-2v-2h-2.5l-3.4-3.4"/></symbol>
+  <symbol id="i-disc" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#/" aria-label="rilzapiweb, ke beranda">
+      <span class="brand-mark"><svg><use href="#i-note"/></svg></span>
+      <span>rilz<b>apiweb</b></span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Navigasi utama">
+      <a href="#/" data-route="home">Beranda</a>
+      <a href="#/docs" data-route="docs">Dokumentasi</a>
+      <a href="#/key" data-route="key">API Key</a>
+    </nav>
+    <div class="topbar-right">
+      <span class="pill" id="status-pill"><span class="dot" id="status-dot"></span><span id="status-text">Memeriksa server</span></span>
+      <a class="btn btn--sm" id="top-cta" href="#/key">Minta API key</a>
+      <button class="burger" id="burger" type="button" aria-label="Buka menu" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= BERANDA ================= -->
+  <section data-page="home">
+    <div class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <h1>REST API musik yang sudah tahu siapa artisnya.</h1>
+          <p class="lead">Cari lagu lewat YouTube, terima nama artis asli, album, cover, dan preview 30 detik. Cukup satu request, cocok untuk bot WhatsApp, Telegram, dan aplikasi musik.</p>
+          <div class="hero-actions">
+            <a class="btn" href="#/docs">Buka dokumentasi</a>
+            <a class="btn btn--line" href="#/key">Minta API key gratis</a>
+          </div>
+          <div class="hero-tags">
+            <span class="pill">Gratis</span><span class="pill">Tanpa limit</span><span class="pill">JSON</span><span class="pill">CORS terbuka</span>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal-bar"><i></i><i></i><i></i><span>GET /api/v1/music/search?q=tulus+hati-hati+di+jalan</span></div>
+          <pre><code id="hero-code"></code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="stats" id="stats">
+        <div class="surface stat"><b>Rp0</b><span>gratis untuk semua pengguna</span></div>
+        <div class="surface stat"><b>∞</b><span>request, tanpa limit harian</span></div>
+        <div class="surface stat"><b id="stat-endpoints">3</b><span>endpoint musik</span></div>
+        <div class="surface stat"><b id="stat-keys">…</b><span>API key aktif</span></div>
+      </div>
+
+      <div class="block">
+        <div class="block-head">
+          <h2>Yang kamu dapat dari satu endpoint.</h2>
+          <p>Semua endpoint memakai metode GET, membalas JSON, dan memakai format respons yang sama.</p>
+        </div>
+        <div class="features">
+          <article class="surface feature">
+            <div class="feature-icon"><svg><use href="#i-note"/></svg></div>
+            <h3>Beranda YouTube</h3>
+            <p>Ambil lagu yang sedang tampil di beranda YouTube, sudah dicocokkan dengan katalog musik.</p>
+            <code>GET /music/home</code>
+          </article>
+          <article class="surface feature">
+            <div class="feature-icon"><svg><use href="#i-search"/></svg></div>
+            <h3>Cari lagu</h3>
+            <p>Cari berdasarkan judul atau nama artis. Judul “Official Video” dibersihkan otomatis.</p>
+            <code>GET /music/search?q=</code>
+          </article>
+          <article class="surface feature">
+            <div class="feature-icon"><svg><use href="#i-list"/></svg></div>
+            <h3>Playlist</h3>
+            <p>Ubah playlist YouTube publik menjadi daftar lagu lengkap dengan data artisnya.</p>
+            <code>GET /music/playlist?url=</code>
+          </article>
+          <article class="surface feature">
+            <div class="feature-icon"><svg><use href="#i-user"/></svg></div>
+            <h3>Artis asli</h3>
+            <p>Nama artis diambil dari katalog, bukan nama channel pengunggah video.</p>
+            <code>"artist": "Tulus"</code>
+          </article>
+          <article class="surface feature">
+            <div class="feature-icon"><svg><use href="#i-disc"/></svg></div>
+            <h3>Album, cover, preview</h3>
+            <p>Dapatkan nama album, cover beresolusi tinggi, dan cuplikan audio 30 detik bila tersedia.</p>
+            <code>"preview": "https://…mp3"</code>
+          </article>
+          <article class="surface feature">
+            <div class="feature-icon"><svg><use href="#i-key"/></svg></div>
+            <h3>Gratis, tanpa limit</h3>
+            <p>Tanpa akun dan tanpa kuota harian. Cukup minta API key ke admin lalu pakai.</p>
+            <code>x-api-key: rilz_xxx</code>
+          </article>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-head">
+          <h2>Dari judul kotor ke data lagu.</h2>
+          <p>Setiap video melewati tiga langkah sebelum sampai ke aplikasimu.</p>
+        </div>
+        <div class="flow">
+          <article class="surface flow-step">
+            <h3>Ambil dari YouTube</h3>
+            <p>Server membaca beranda, hasil pencarian, atau playlist YouTube.</p>
+            <code>"keshi - UNDERSTAND (Official Video) [4K]"</code>
+          </article>
+          <article class="surface flow-step">
+            <h3>Bersihkan judul</h3>
+            <p>Kata promosi dibuang, lalu pola “Artis - Judul” dipisahkan.</p>
+            <code>artis: keshi · judul: UNDERSTAND</code>
+          </article>
+          <article class="surface flow-step">
+            <h3>Cocokkan katalog</h3>
+            <p>Spotify (opsional), Deezer, lalu iTunes. Hanya hasil yang cukup mirip yang dipakai.</p>
+            <code>"source": "deezer", "confidence": 0.97</code>
+          </article>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="cta-band">
+          <div>
+            <h2>Siap mencoba request pertamamu?</h2>
+            <p>Minta API key ke admin, lalu jalankan endpoint langsung dari halaman dokumentasi.</p>
+          </div>
+          <a class="btn" href="#/key">Minta API key</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DOKUMENTASI ================= -->
+  <section data-page="docs" hidden>
+    <div class="wrap docs">
+      <aside class="side" aria-label="Daftar endpoint">
+        <label class="side-search">
+          <span class="sr-only">Cari endpoint</span>
+          <input class="input" id="side-search" type="search" placeholder="Cari endpoint" autocomplete="off">
+          <span class="kbd">Ctrl K</span>
+        </label>
+        <nav id="side-nav"></nav>
+      </aside>
+
+      <div>
+        <header class="docs-head">
+          <h1>Dokumentasi API</h1>
+          <p>Klik sebuah endpoint, isi parameter, lalu tekan Jalankan untuk melihat respons yang sebenarnya.</p>
+          <div class="surface base-box">
+            <small>Base URL</small>
+            <code id="base-url"></code>
+            <button class="btn btn--sm btn--line" type="button" id="copy-base">Salin</button>
+          </div>
+          <div class="surface key-row">
+            <label class="field">API key untuk mencoba
+              <input class="input" id="try-key" type="text" placeholder="rilz_xxxxxxxx" autocomplete="off" spellcheck="false">
+            </label>
+            <a class="btn btn--sm btn--line" href="#/key">Minta key</a>
+          </div>
+        </header>
+
+        <div id="endpoint-list"></div>
+
+        <h2 class="group-title" id="ref">Isi respons</h2>
+        <p class="muted" style="margin-bottom:14px">Field yang tidak ditemukan di katalog bernilai <code>null</code>.</p>
+        <div class="surface table-scroll">
+          <table class="ref-table">
+            <thead><tr><th>Field</th><th>Tipe</th><th>Keterangan</th></tr></thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>string</td><td>ID video YouTube.</td></tr>
+              <tr><td><code>title</code></td><td>string</td><td>Judul lagu asli dari katalog, tanpa “Official Video” dan sejenisnya.</td></tr>
+              <tr><td><code>artist</code></td><td>string</td><td>Nama artis asli. Kolaborasi dipisahkan koma.</td></tr>
+              <tr><td><code>artists</code></td><td>array</td><td>Daftar nama artis satu per satu.</td></tr>
+              <tr><td><code>album</code></td><td>string | null</td><td>Nama album atau single.</td></tr>
+              <tr><td><code>cover</code>, <code>thumbnail</code></td><td>string</td><td>URL cover album. Bila tidak cocok, memakai thumbnail YouTube.</td></tr>
+              <tr><td><code>duration</code></td><td>number | null</td><td>Durasi dalam detik.</td></tr>
+              <tr><td><code>preview</code></td><td>string | null</td><td>URL audio cuplikan 30 detik.</td></tr>
+              <tr><td><code>url</code></td><td>string</td><td>Link video YouTube.</td></tr>
+              <tr><td><code>playlist</code></td><td>string</td><td>Nama bagian atau playlist asal lagu.</td></tr>
+              <tr><td><code>source</code></td><td>string</td><td><code>spotify</code>, <code>deezer</code>, <code>itunes</code>, atau <code>youtube</code> jika tidak ada kecocokan.</td></tr>
+              <tr><td><code>sourceUrl</code></td><td>string | null</td><td>Link lagu di katalog sumber.</td></tr>
+              <tr><td><code>confidence</code></td><td>number</td><td>Skor kecocokan 0 sampai 1.</td></tr>
+              <tr><td><code>youtube</code></td><td>object</td><td>Data mentah asli: <code>title</code>, <code>channel</code>, <code>thumbnail</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 class="group-title" id="codes">Kode status</h2>
+        <div class="codes">
+          <div class="surface code-card is-ok"><b>200</b><p>Berhasil. Data ada di <code>result</code>, sisa kuota di <code>meta</code>.</p></div>
+          <div class="surface code-card is-bad"><b>400</b><p>Parameter <code>q</code> atau <code>url</code> kosong.</p></div>
+          <div class="surface code-card is-bad"><b>401</b><p>API key tidak dikirim, tidak valid, atau sudah dinonaktifkan admin.</p></div>
+            <div class="surface code-card is-bad"><b>5xx</b><p>YouTube tidak dapat diambil. Coba lagi beberapa saat.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= API KEY ================= -->
+  <section data-page="key" hidden>
+    <div class="wrap page">
+      <h1 class="page-title">API Key</h1>
+      <p class="page-sub">API ini gratis untuk semua pengguna dan tanpa limit request. Key dibagikan langsung oleh admin, tanpa daftar akun.</p>
+
+      <div class="flow" style="margin-top:36px">
+        <article class="surface flow-step"><h3>Hubungi admin</h3><p>Kirim pesan lewat WhatsApp atau Telegram, sebutkan nama dan untuk apa API dipakai.</p></article>
+        <article class="surface flow-step"><h3>Terima API key</h3><p>Admin mengirim key berawalan <code style="display:inline;padding:1px 6px;border:0">rilz_</code> kepadamu.</p></article>
+        <article class="surface flow-step"><h3>Pakai di request</h3><p>Kirim lewat header <code style="display:inline;padding:1px 6px;border:0">x-api-key</code> atau parameter <code style="display:inline;padding:1px 6px;border:0">apikey</code>.</p></article>
+      </div>
+
+      <div class="dash-grid">
+        <div class="surface panel">
+          <h3>Minta key ke admin</h3>
+          <p class="muted" style="margin:10px 0 20px">Tombol di bawah membuka chat dengan pesan yang sudah terisi.</p>
+          <div class="try-actions" style="margin-top:0">
+            <a class="btn" id="contact-wa" href="#" target="_blank" rel="noreferrer">Chat WhatsApp</a>
+            <a class="btn btn--line" id="contact-tg" href="#" target="_blank" rel="noreferrer" hidden>Buka bot Telegram</a>
+          </div>
+        </div>
+
+        <div class="surface panel">
+          <h3>Sudah punya key?</h3>
+          <p class="muted" style="margin:10px 0 0">Simpan di browser ini supaya otomatis terisi di halaman dokumentasi, lalu periksa apakah key aktif.</p>
+          <label class="field">API key
+            <input class="input" id="key-input" type="text" placeholder="rilz_xxxxxxxx" autocomplete="off" spellcheck="false">
+          </label>
+          <p class="msg" id="key-message" role="status"></p>
+          <div class="try-actions" style="margin-top:6px">
+            <button class="btn btn--sm" type="button" id="key-check">Periksa key</button>
+            <button class="btn btn--sm btn--line" type="button" id="key-clear">Hapus dari browser</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="surface quick" style="margin-top:28px">
+        <h3>Contoh pemakaian</h3>
+        <p class="muted" style="margin-bottom:14px">Salin ke terminal. Key kamu terisi otomatis setelah disimpan di atas.</p>
+        <pre><code id="quick-code"></code></pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="#/"><span class="brand-mark"><svg><use href="#i-note"/></svg></span><span>rilz<b>apiweb</b></span></a>
+        <p>REST API data lagu untuk developer bot dan aplikasi musik di Indonesia.</p>
+      </div>
+      <div>
+        <h4>Produk</h4>
+        <ul><li><a href="#/docs">Dokumentasi</a></li><li><a href="#/key">API Key</a></li></ul>
+      </div>
+      <div>
+        <h4>Endpoint</h4>
+        <ul><li><a href="#/docs/home">Beranda</a></li><li><a href="#/docs/search">Cari lagu</a></li><li><a href="#/docs/playlist">Playlist</a></li></ul>
+      </div>
+      <div>
+        <h4>Bantuan</h4>
+        <ul><li><a href="#/docs/codes">Kode status</a></li><li><a href="#/key" id="footer-wa">Hubungi admin</a></li></ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 rilzapiweb</span>
+      <span>Data lagu milik pemegang hak cipta masing-masing.</span>
+    </div>
+  </div>
+</footer>
+
+<div class="player" id="player" role="region" aria-label="Pemutar preview">
+  <img id="player-cover" alt="">
+  <div><strong id="player-title">Judul</strong><span id="player-artist">Artis</span><div class="player-bar"><i id="player-progress"></i></div></div>
+  <button class="round-btn" id="player-toggle" type="button" aria-label="Putar atau jeda"><svg><use href="#i-pause"/></svg></button>
+  <button class="player-x" id="player-close" type="button" aria-label="Tutup pemutar">×</button>
+</div>
+<audio id="audio" preload="none"></audio>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="/site.js"></script>
+</body>
+</html>
