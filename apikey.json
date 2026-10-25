@@ -3,8 +3,8 @@
     {
       "key": "Xtz-Rlzbotz",
       "name": "Contoh API Key",
-      "plan": "free",
-      "active": false
+      "plan": "Dev",
+      "active": true
     }
   ]
 }
