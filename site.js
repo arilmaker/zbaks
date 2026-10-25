@@ -306,7 +306,10 @@ function renderResponse(id) {
       return '<div class="song-row">' +
         (cover ? '<img src="' + escapeHtml(cover) + '" alt="" loading="lazy">' : '<div class="ph"></div>') +
         "<div><strong>" + escapeHtml(track.title) + "</strong><span>" + escapeHtml([track.artist, track.album, formatDuration(track.duration)].filter(Boolean).join(" · ")) + '</span><span class="src">' + escapeHtml(track.source || "youtube") + "</span></div>" +
-        '<button class="round-btn" type="button" data-play="' + id + ":" + index + '" aria-label="Putar preview ' + escapeHtml(track.title) + '"' + (track.preview ? "" : " disabled") + '><svg><use href="#i-play"/></svg></button></div>';
+        '<div class="row-actions">' +
+          (track.audio || track.preview ? '<button class="mini-btn" type="button" data-play="' + id + ":" + index + ':preview" aria-label="Putar preview 30 detik ' + escapeHtml(track.title) + '">30 dtk</button>' : "") +
+          '<button class="round-btn" type="button" data-play="' + id + ":" + index + ':full" aria-label="Putar lagu penuh ' + escapeHtml(track.title) + '"><svg><use href="#i-play"/></svg></button>' +
+        "</div></div>";
     }).join("") + "</div>";
   } else if (data.view === "curl") {
     body = "<pre><code>" + escapeHtml(data.curl) + "</code></pre>";
@@ -375,7 +378,7 @@ $("#endpoint-list").addEventListener("click", (event) => {
   }
   if (view) { const [id, key] = view.dataset.view.split(":"); responses.get(id).view = key; renderResponse(id); }
   if (copyRes) copyText(JSON.stringify(responses.get(copyRes.dataset.copyres).raw, null, 2), "Respons tersalin");
-  if (play) { const [id, index] = play.dataset.play.split(":"); playTrack(responses.get(id).tracks[Number(index)]); }
+  if (play) { const [id, index, mode] = play.dataset.play.split(":"); playTrack(responses.get(id).tracks[Number(index)], mode); }
 });
 
 $("#endpoint-list").addEventListener("input", (event) => {
@@ -459,16 +462,40 @@ $("#key-clear").addEventListener("click", () => { applyKey(""); setKeyMessage("K
 const audio = $("#audio");
 const player = $("#player");
 
-function playTrack(track) {
-  if (!track || !track.preview) { toast("Lagu ini tidak punya preview.", "error"); return; }
-  $("#player-cover").src = track.cover || track.thumbnail || "";
+function stopPlayer() {
+  audio.pause();
+  $("#player-frame").innerHTML = "";
+  $("#player-frame").hidden = true;
+}
+
+/** mode "preview": file mp3 30 detik langsung. mode "full": lagu penuh lewat pemutar YouTube resmi (embed). */
+function playTrack(track, mode = "full") {
+  if (!track) return;
+  const audioUrl = track.audio || track.preview;
+  if (mode === "preview" && !audioUrl) { toast("Lagu ini tidak punya preview.", "error"); return; }
+  stopPlayer();
+  const coverUrl = track.cover || track.thumbnail || "";
+  $("#player-cover").hidden = !coverUrl;
+  if (coverUrl) $("#player-cover").src = coverUrl;
   $("#player-title").textContent = track.title;
   $("#player-artist").textContent = track.artist;
-  audio.src = track.preview;
-  audio.play().then(() => player.classList.add("is-open")).catch(() => toast("Preview tidak dapat diputar.", "error"));
+  $("#player-progress").style.width = "0";
+
+  if (mode === "preview") {
+    $("#player-toggle").hidden = false;
+    audio.src = audioUrl;
+    audio.play().then(() => player.classList.add("is-open")).catch(() => toast("Preview tidak dapat diputar.", "error"));
+    return;
+  }
+  // Lagu penuh: pemutar YouTube resmi. Tombol jeda ada di dalam pemutarnya sendiri.
+  $("#player-toggle").hidden = true;
+  const frame = $("#player-frame");
+  frame.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(track.id) + '?autoplay=1&playsinline=1&rel=0" title="' + escapeHtml(track.title) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+  frame.hidden = false;
+  player.classList.add("is-open");
 }
 $("#player-toggle").addEventListener("click", () => { if (audio.paused) audio.play(); else audio.pause(); });
-$("#player-close").addEventListener("click", () => { audio.pause(); player.classList.remove("is-open"); });
+$("#player-close").addEventListener("click", () => { stopPlayer(); player.classList.remove("is-open"); });
 audio.addEventListener("play", () => $("#player-toggle use").setAttribute("href", "#i-pause"));
 audio.addEventListener("pause", () => $("#player-toggle use").setAttribute("href", "#i-play"));
 audio.addEventListener("ended", () => { $("#player-progress").style.width = "0"; });

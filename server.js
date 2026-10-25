@@ -4,7 +4,7 @@ const path = require("path");
 const crypto = require("crypto");
 const keys = require("./keys");
 const { getHomeTracks, searchTracks, getPlaylist } = require("./youtube");
-const { enrichTracks } = require("./metadata");
+const { enrichTracks, getDiagnostics } = require("./metadata");
 
 function readEnvFile() {
   const envPath = path.join(__dirname, ".env");
@@ -62,6 +62,15 @@ function requireAdmin(req, res) {
 
 function ok(res, result, extra = {}) { json(res, 200, { status: true, result, meta: { ...extra } }); }
 
+/** Ringkasan pencocokan katalog untuk meta. Jika tidak ada yang cocok, sertakan penyebab terakhir. */
+function catalogMeta(tracks, enrich) {
+  if (!enrich) return { enriched: false };
+  const matched = tracks.filter((track) => track.source && track.source !== "youtube").length;
+  const meta = { enriched: true, matched };
+  if (tracks.length && matched === 0) meta.catalogError = getDiagnostics().lastError || "tidak ada hasil katalog yang cocok";
+  return meta;
+}
+
 /**
  * Hanya tiga file ini yang boleh dibuka lewat URL. Semua file lain di folder yang sama
  * (apikey.json, server.js, keys.js, .env, dst.) TIDAK PERNAH disajikan.
@@ -118,18 +127,18 @@ async function handle(req, res) {
       const enrich = wantsEnrich(url.searchParams.get("enrich"));
       if (pathname === "/api/v1/music/home") {
         let tracks = await getHomeTracks(); if (enrich) tracks = await enrichTracks(tracks);
-        return ok(res, tracks, { count: tracks.length, enriched: enrich });
+        return ok(res, tracks, { count: tracks.length, ...catalogMeta(tracks, enrich) });
       }
       if (pathname === "/api/v1/music/search") {
         const query = String(url.searchParams.get("q") || "").trim();
         if (!query) return json(res, 400, { status: false, message: "Parameter q diperlukan." });
         let tracks = await searchTracks(query); if (enrich) tracks = await enrichTracks(tracks);
-        return ok(res, tracks, { query, count: tracks.length, enriched: enrich });
+        return ok(res, tracks, { query, count: tracks.length, ...catalogMeta(tracks, enrich) });
       }
       const playlistUrl = String(url.searchParams.get("url") || "").trim();
       if (!playlistUrl) return json(res, 400, { status: false, message: "Parameter url playlist diperlukan." });
       const playlist = await getPlaylist(playlistUrl); if (enrich) playlist.tracks = await enrichTracks(playlist.tracks);
-      return ok(res, playlist, { count: playlist.tracks.length, enriched: enrich });
+      return ok(res, playlist, { count: playlist.tracks.length, ...catalogMeta(playlist.tracks, enrich) });
     }
 
     /* ---------- admin (header x-admin-token) ---------- */

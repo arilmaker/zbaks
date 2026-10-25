@@ -21,6 +21,9 @@ const CONCURRENCY = 8;
 const MATCH_THRESHOLD = 0.55;
 
 const cache = new Map();
+const diagnostics = { lastError: null };
+
+function getDiagnostics() { return { lastError: diagnostics.lastError }; }
 
 /* ------------------------------------------------------------------ */
 /* Pembersihan teks                                                    */
@@ -238,32 +241,37 @@ async function findBestMatch(track) {
   const queries = [...new Set([parsed.artist + " " + parsed.title, parsed.title])].filter((q) => q.trim());
 
   let best = null;
+  let hadError = false;
   for (const search of providers()) {
     for (const query of queries) {
       let candidates = [];
-      try { candidates = await search(query); } catch (_) { continue; }
+      try { candidates = await search(query); } catch (error) { hadError = true; diagnostics.lastError = search.name + ": " + error.message; continue; }
       for (const candidate of candidates) {
         const score = scoreCandidate(candidate, wanted);
         if (!best || score > best.score) best = { ...candidate, score };
       }
-      if (best && best.score >= 0.85) return best;
+      if (best && best.score >= 0.85) return { match: best, hadError };
     }
-    if (best && best.score >= MATCH_THRESHOLD) return best;
+    if (best && best.score >= MATCH_THRESHOLD) return { match: best, hadError };
   }
-  return best && best.score >= MATCH_THRESHOLD ? best : null;
+  return { match: best && best.score >= MATCH_THRESHOLD ? best : null, hadError };
 }
 
 async function enrichTrack(track) {
   const key = track.id;
   let match = cacheGet(key);
   if (match === undefined) {
-    try { match = await findBestMatch(track); } catch (_) { match = null; }
-    cacheSet(key, match);
+    let result = { match: null, hadError: true };
+    try { result = await findBestMatch(track); } catch (error) { diagnostics.lastError = error.message; }
+    match = result.match;
+    // Hanya simpan "tidak cocok" bila memang tidak ada kecocokan. Jika penyebabnya error
+    // jaringan/provider, jangan di-cache supaya request berikutnya mencoba lagi.
+    if (match || !result.hadError) cacheSet(key, match);
   }
   const youtube = { title: track.title, channel: track.artist, thumbnail: track.thumbnail };
   if (!match) {
     const guess = parseYoutubeTitle(track.title, track.artist);
-    return { ...track, artist: guess.artist || track.artist, title: guess.title || track.title, album: null, duration: null, source: "youtube", youtube };
+    return { ...track, artist: guess.artist || track.artist, title: guess.title || track.title, album: null, duration: null, audio: null, source: "youtube", youtube };
   }
   return {
     ...track,
@@ -275,6 +283,7 @@ async function enrichTrack(track) {
     cover: match.cover || track.thumbnail,
     duration: match.duration || null,
     preview: match.preview || null,
+    audio: match.preview || null,
     explicit: Boolean(match.explicit),
     releaseDate: match.releaseDate || null,
     source: match.source,
@@ -298,4 +307,4 @@ async function enrichTracks(tracks) {
   return output;
 }
 
-module.exports = { enrichTracks, enrichTrack, parseYoutubeTitle, cleanChannel, scoreCandidate, spotifyEnabled };
+module.exports = { getDiagnostics, enrichTracks, enrichTrack, parseYoutubeTitle, cleanChannel, scoreCandidate, spotifyEnabled };

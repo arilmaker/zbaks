@@ -202,12 +202,13 @@
               <tr><td><code>album</code></td><td>string | null</td><td>Nama album atau single.</td></tr>
               <tr><td><code>cover</code>, <code>thumbnail</code></td><td>string</td><td>URL cover album. Bila tidak cocok, memakai thumbnail YouTube.</td></tr>
               <tr><td><code>duration</code></td><td>number | null</td><td>Durasi dalam detik.</td></tr>
-              <tr><td><code>preview</code></td><td>string | null</td><td>URL audio cuplikan 30 detik.</td></tr>
-              <tr><td><code>url</code></td><td>string</td><td>Link video YouTube.</td></tr>
+              <tr><td><code>audio</code>, <code>preview</code></td><td>string | null</td><td>URL file audio (mp3) langsung, bisa dimasukkan ke <code>&lt;audio&gt;</code>. Berupa cuplikan 30 detik dari katalog. <code>null</code> bila tidak ada kecocokan.</td></tr>
+              <tr><td><code>url</code></td><td>string</td><td>Link video YouTube (lagu penuh, dibuka atau di-embed lewat pemutar YouTube).</td></tr>
               <tr><td><code>playlist</code></td><td>string</td><td>Nama bagian atau playlist asal lagu.</td></tr>
               <tr><td><code>source</code></td><td>string</td><td><code>spotify</code>, <code>deezer</code>, <code>itunes</code>, atau <code>youtube</code> jika tidak ada kecocokan.</td></tr>
               <tr><td><code>sourceUrl</code></td><td>string | null</td><td>Link lagu di katalog sumber.</td></tr>
               <tr><td><code>confidence</code></td><td>number</td><td>Skor kecocokan 0 sampai 1.</td></tr>
+              <tr><td><code>meta.matched</code></td><td>number</td><td>Jumlah lagu yang cocok dengan katalog. Jika 0, <code>meta.catalogError</code> berisi penyebabnya.</td></tr>
               <tr><td><code>youtube</code></td><td>object</td><td>Data mentah asli: <code>title</code>, <code>channel</code>, <code>thumbnail</code>.</td></tr>
             </tbody>
           </table>
@@ -296,11 +297,14 @@
   </div>
 </footer>
 
-<div class="player" id="player" role="region" aria-label="Pemutar preview">
-  <img id="player-cover" alt="">
-  <div><strong id="player-title">Judul</strong><span id="player-artist">Artis</span><div class="player-bar"><i id="player-progress"></i></div></div>
-  <button class="round-btn" id="player-toggle" type="button" aria-label="Putar atau jeda"><svg><use href="#i-pause"/></svg></button>
-  <button class="player-x" id="player-close" type="button" aria-label="Tutup pemutar">×</button>
+<div class="player" id="player" role="region" aria-label="Pemutar musik">
+  <div class="player-frame" id="player-frame" hidden></div>
+  <div class="player-main">
+    <img id="player-cover" alt="">
+    <div><strong id="player-title">Judul</strong><span id="player-artist">Artis</span><div class="player-bar"><i id="player-progress"></i></div></div>
+    <button class="round-btn" id="player-toggle" type="button" aria-label="Putar atau jeda"><svg><use href="#i-pause"/></svg></button>
+    <button class="player-x" id="player-close" type="button" aria-label="Tutup pemutar">×</button>
+  </div>
 </div>
 <audio id="audio" preload="none"></audio>
 <div class="toasts" id="toasts" aria-live="polite"></div>

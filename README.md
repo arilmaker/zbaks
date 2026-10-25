@@ -98,7 +98,15 @@ Kode status: `200` berhasil, `400` parameter kosong, `401` key tidak ada, salah,
 3. Kandidat diberi skor kemiripan judul dan artis. Hanya skor di atas 0,55 yang dipakai.
 4. Jika tidak ada yang cocok, `source` bernilai `youtube` dan data tetap versi YouTube yang sudah dibersihkan.
 
-Hasil dicache 6 jam di memori. Tambahkan `&enrich=0` untuk data YouTube saja (lebih cepat).
+Hasil dicache 6 jam di memori (kegagalan jaringan ke katalog tidak ikut di-cache). Tambahkan `&enrich=0` untuk data YouTube saja (lebih cepat).
+
+Jika `meta.matched` bernilai 0 padahal ada hasil, lihat `meta.catalogError` untuk penyebabnya (misalnya Deezer/iTunes memblokir IP hosting).
+
+## Memutar musik
+
+- `audio` (sama dengan `preview`): URL mp3 **langsung** cuplikan 30 detik dari Deezer/iTunes. Cocok untuk `<audio src="...">`.
+- `url`: link video YouTube untuk **lagu penuh**. Di web, tombol putar membuka pemutar YouTube resmi (embed), jadi semua lagu bisa diputar penuh.
+- API ini tidak memberikan URL mp3 lagu penuh dari YouTube: itu melanggar ketentuan YouTube dan hak cipta, dan sering diblokir di IP hosting.
 
 ```json
 {
