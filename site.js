@@ -28,7 +28,9 @@ function toast(message, type = "ok") {
   const item = document.createElement("div");
   item.className = "toast" + (type === "error" ? " is-error" : "");
   item.textContent = message;
-  $("#toasts").appendChild(item);
+  const stack = $("#toasts");
+  while (stack.children.length >= 2) stack.firstElementChild.remove();
+  stack.appendChild(item);
   setTimeout(() => { item.classList.add("is-leaving"); setTimeout(() => item.remove(), 300); }, 2600);
 }
 
@@ -462,10 +464,49 @@ $("#key-clear").addEventListener("click", () => { applyKey(""); setKeyMessage("K
 const audio = $("#audio");
 const player = $("#player");
 
+let ytPlayer = null;
+let ytApiPromise = null;
+
 function stopPlayer() {
   audio.pause();
+  if (ytPlayer && typeof ytPlayer.destroy === "function") { try { ytPlayer.destroy(); } catch (_) { /* abaikan */ } }
+  ytPlayer = null;
   $("#player-frame").innerHTML = "";
   $("#player-frame").hidden = true;
+}
+
+/** Memuat YouTube IFrame API sekali saja. Gagal (diblokir) -> promise ditolak, dan kita pakai iframe biasa. */
+function loadYouTubeApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (!ytApiPromise) {
+    ytApiPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("timeout")), 6000);
+      window.onYouTubeIframeAPIReady = () => { clearTimeout(timer); resolve(); };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.onerror = () => { clearTimeout(timer); reject(new Error("diblokir")); };
+      document.head.appendChild(script);
+    });
+  }
+  return ytApiPromise;
+}
+
+/** Dipanggil saat YouTube menolak memutar video di situs kita. */
+function handleEmbedError(track, code) {
+  const reasons = { 2: "ID video tidak valid", 5: "video tidak bisa diputar di pemutar ini", 100: "video tidak ditemukan atau privat", 101: "pemilik video melarang diputar di situs lain", 150: "pemilik video melarang diputar di situs lain" };
+  const reason = reasons[code] || "YouTube menolak memutar video ini";
+  const audioUrl = track.audio || track.preview;
+  if (audioUrl) {
+    toast("Lagu penuh tidak bisa di sini (" + reason + "). Memutar preview 30 detik.", "error");
+    playTrack(track, "preview");
+  } else {
+    // Tutup layar hitam; pemutar tetap terbuka dengan tombol YouTube.
+    if (ytPlayer && typeof ytPlayer.destroy === "function") { try { ytPlayer.destroy(); } catch (_) { /* abaikan */ } }
+    ytPlayer = null;
+    $("#player-frame").innerHTML = "";
+    $("#player-frame").hidden = true;
+    toast("Tidak bisa diputar di sini: " + reason + ". Tekan tombol YouTube di pemutar.", "error");
+  }
 }
 
 /** mode "preview": file mp3 30 detik langsung. mode "full": lagu penuh lewat pemutar YouTube resmi (embed). */
@@ -475,24 +516,49 @@ function playTrack(track, mode = "full") {
   if (mode === "preview" && !audioUrl) { toast("Lagu ini tidak punya preview.", "error"); return; }
   stopPlayer();
   const coverUrl = track.cover || track.thumbnail || "";
-  $("#player-cover").hidden = !coverUrl;
-  if (coverUrl) $("#player-cover").src = coverUrl;
+  // visibility (bukan hidden) supaya kolom grid pemutar tidak bergeser saat cover kosong
+  $("#player-cover").style.visibility = coverUrl ? "visible" : "hidden";
+  if (coverUrl) $("#player-cover").src = coverUrl; else $("#player-cover").removeAttribute("src");
   $("#player-title").textContent = track.title;
   $("#player-artist").textContent = track.artist;
   $("#player-progress").style.width = "0";
+  const link = $("#player-yt");
+  link.href = track.url || "https://www.youtube.com/watch?v=" + encodeURIComponent(track.id);
 
   if (mode === "preview") {
     $("#player-toggle").hidden = false;
     audio.src = audioUrl;
-    audio.play().then(() => player.classList.add("is-open")).catch(() => toast("Preview tidak dapat diputar.", "error"));
+    audio.play()
+      .then(() => player.classList.add("is-open"))
+      .catch(() => { player.classList.add("is-open"); toast("Preview tidak dapat diputar di browser ini. Coba tombol YouTube.", "error"); });
+    player.classList.add("is-open");
     return;
   }
-  // Lagu penuh: pemutar YouTube resmi. Tombol jeda ada di dalam pemutarnya sendiri.
+
+  // Lagu penuh lewat pemutar YouTube resmi. Jeda/lanjut memakai kontrol di dalam pemutarnya.
   $("#player-toggle").hidden = true;
   const frame = $("#player-frame");
-  frame.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(track.id) + '?autoplay=1&playsinline=1&rel=0" title="' + escapeHtml(track.title) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+  frame.innerHTML = '<div id="yt-target"></div>';
   frame.hidden = false;
   player.classList.add("is-open");
+  const token = Symbol("play");
+  playTrack.token = token;
+
+  loadYouTubeApi().then(() => {
+    if (playTrack.token !== token) return;               // pengguna sudah memilih lagu lain
+    ytPlayer = new window.YT.Player("yt-target", {
+      width: "100%", height: "100%", videoId: track.id,
+      playerVars: { autoplay: 1, playsinline: 1, rel: 0, origin: window.location.origin },
+      events: {
+        onReady: (event) => { try { event.target.playVideo(); } catch (_) { /* pengguna bisa menekan play */ } },
+        onError: (event) => handleEmbedError(track, event.data),
+      },
+    });
+  }).catch(() => {
+    if (playTrack.token !== token) return;
+    // IFrame API tidak bisa dimuat: pakai iframe biasa (tanpa deteksi error).
+    frame.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(track.id) + '?autoplay=1&playsinline=1&rel=0" title="' + escapeHtml(track.title) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+  });
 }
 $("#player-toggle").addEventListener("click", () => { if (audio.paused) audio.play(); else audio.pause(); });
 $("#player-close").addEventListener("click", () => { stopPlayer(); player.classList.remove("is-open"); });
